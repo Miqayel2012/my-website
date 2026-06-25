@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Հenakety AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Armenian:wght@500;600;700&family=Noto+Sans+Armenian:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+<style>
+:root {
+  --night: #0f0e1a;
+  --night2: #16142a;
+  --sidebar: #13111f;
+  --card: #1c1a2e;
+  --purple: #7c5cfc;
+  --purple-glow: rgba(124,92,252,0.35);
+  --user-bubble: #5b40e8;
+  --gold: #e8b86d;
+  --mist: #b8b0d8;
+  --paper: #eeeaf8;
+  --dim: #6e6888;
+  --online: #3dd68c;
+  --border: rgba(255,255,255,0.06);
+  --radius: 18px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{background:var(--night);color:var(--paper);font-family:'Noto Sans Armenian',sans-serif;display:flex;height:100vh;}
+
+/* ONBOARDING */
+#onboard{
+  position:fixed;inset:0;z-index:999;
+  background:radial-gradient(ellipse at top,#2d2050 0%,#1a1530 45%,#110d20 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:40px 20px;text-align:center;
+}
+.eyebrow{font-size:13px;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;margin-bottom:14px;opacity:.85;}
+#onboard h1{font-family:'Noto Serif Armenian',serif;font-weight:700;font-size:clamp(28px,6vw,44px);color:var(--paper);line-height:1.18;margin-bottom:12px;}
+#onboard p{max-width:460px;font-size:16px;font-weight:300;line-height:1.6;color:var(--mist);opacity:.85;margin-bottom:36px;}
+.onboard-card{width:100%;max-width:380px;background:rgba(255,255,255,0.04);border:1px solid rgba(232,184,109,0.25);border-radius:var(--radius);padding:30px;backdrop-filter:blur(8px);}
+.onboard-card label{display:block;text-align:left;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin-bottom:10px;}
+.onboard-card input{width:100%;background:transparent;border:none;border-bottom:1px solid rgba(207,198,232,0.3);color:var(--paper);font-family:'Noto Serif Armenian',serif;font-size:19px;padding:6px 2px 12px;outline:none;margin-bottom:22px;transition:border-color .3s;}
+.onboard-card input:focus{border-bottom-color:var(--gold);}
+.onboard-card input::placeholder{color:rgba(207,198,232,0.4);}
+.btn-primary{width:100%;background:linear-gradient(135deg,var(--purple),#5b3ed6);color:#fff;border:none;padding:14px;border-radius:999px;font-family:'Noto Sans Armenian',sans-serif;font-weight:600;font-size:15px;cursor:pointer;transition:transform .2s,box-shadow .2s;box-shadow:0 4px 18px var(--purple-glow);}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 28px var(--purple-glow);}
+.btn-primary:disabled{opacity:.5;cursor:default;transform:none;}
+
+/* APP */
+#app{display:none;width:100%;height:100vh;}
+#app.show{display:flex;}
+
+/* SIDEBAR */
+.sidebar{
+  width:270px;flex-shrink:0;height:100vh;
+  background:var(--sidebar);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:20px 14px;
+}
+.sb-brand{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:0 4px;flex-shrink:0;}
+.sb-logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#7c5cfc,#b06cfc);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.sb-brand-text{line-height:1.2;}
+.sb-brand-title{font-family:'Noto Serif Armenian',serif;font-weight:700;font-size:17px;color:var(--paper);}
+.sb-brand-sub{font-size:11px;color:var(--dim);}
+.sb-badge{background:var(--purple);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;margin-left:6px;}
+
+.new-btn{flex-shrink:0;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--purple),#5b3ed6);color:#fff;border:none;border-radius:12px;padding:11px 16px;font-size:14px;font-weight:600;cursor:pointer;width:100%;margin-bottom:16px;font-family:'Noto Sans Armenian',sans-serif;box-shadow:0 3px 14px var(--purple-glow);transition:box-shadow .2s,transform .2s;}
+.new-btn:hover{transform:translateY(-1px);box-shadow:0 5px 20px var(--purple-glow);}
+
+/* scrollable middle */
+.sb-scroll{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;}
+.sb-scroll::-webkit-scrollbar{width:3px;}
+.sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px;}
+
+.sb-nav{display:flex;flex-direction:column;gap:2px;margin-bottom:16px;}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:14px;color:var(--mist);cursor:pointer;transition:background .15s,color .15s;}
+.sb-item:hover{background:rgba(255,255,255,0.04);}
+.sb-item.active{background:rgba(124,92,252,0.15);color:var(--paper);}
+.sb-item .icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+.sb-dot{width:7px;height:7px;border-radius:50%;background:var(--purple);margin-left:auto;flex-shrink:0;}
+
+.sb-section-title{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);padding:0 12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
+.sb-section-title a{color:var(--purple);cursor:pointer;font-size:11px;letter-spacing:0;text-transform:none;}
+.hist-item{padding:9px 12px;border-radius:10px;cursor:pointer;transition:background .15s;}
+.hist-item:hover{background:rgba(255,255,255,0.04);}
+.hist-title{font-size:13px;color:var(--mist);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hist-time{font-size:11px;color:var(--dim);margin-top:2px;}
+
+/* bottom fixed */
+.sb-bottom{flex-shrink:0;margin-top:12px;}
+.pro-card{background:linear-gradient(135deg,rgba(124,92,252,0.12),rgba(176,108,252,0.08));border:1px solid rgba(124,92,252,0.25);border-radius:14px;padding:14px;margin-bottom:12px;}
+.pro-card-title{font-size:13px;font-weight:600;color:var(--paper);margin-bottom:4px;}
+.pro-card-sub{font-size:12px;color:var(--mist);opacity:.7;margin-bottom:12px;line-height:1.5;}
+.pro-btn{width:100%;background:linear-gradient(135deg,var(--purple),#5b3ed6);color:#fff;border:none;border-radius:999px;padding:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Noto Sans Armenian',sans-serif;}
+.sb-user{display:flex;align-items:center;gap:10px;padding:10px 8px 0;border-top:1px solid var(--border);}
+.sb-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#7c5cfc,#b06cfc);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0;}
+.sb-user-info{flex:1;min-width:0;}
+.sb-user-name{font-size:14px;font-weight:600;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-user-email{font-size:11px;color:var(--dim);}
+.sb-chevron{color:var(--dim);font-size:12px;cursor:pointer;}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--night2);}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.topbar-left{display:flex;align-items:center;gap:12px;}
+.menu-btn{background:none;border:none;color:var(--mist);font-size:20px;cursor:pointer;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background .15s;}
+.menu-btn:hover{background:rgba(255,255,255,0.05);}
+.topbar-title{font-family:'Noto Serif Armenian',serif;font-weight:700;font-size:17px;color:var(--paper);}
+.online-indicator{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--online);margin-top:2px;}
+.online-indicator::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--online);display:inline-block;}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.icon-btn{width:36px;height:36px;border-radius:10px;border:none;cursor:pointer;background:rgba(255,255,255,0.05);color:var(--mist);font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+.icon-btn:hover{background:rgba(255,255,255,0.09);color:var(--paper);}
+.icon-btn.on{background:var(--purple);color:#fff;}
+
+/* chat */
+.chat-area{flex:1;overflow-y:auto;padding:24px 28px;display:flex;flex-direction:column;gap:20px;scroll-behavior:smooth;}
+.chat-area::-webkit-scrollbar{width:4px;}
+.chat-area::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px;}
+
+.msg-row{display:flex;gap:12px;align-items:flex-end;}
+.msg-row.user{flex-direction:row-reverse;}
+.msg-av{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;background:linear-gradient(135deg,#7c5cfc,#b06cfc);color:#fff;font-weight:700;}
+.msg-body{max-width:62%;display:flex;flex-direction:column;gap:4px;}
+.msg-row.user .msg-body{align-items:flex-end;}
+.bubble{padding:12px 16px;border-radius:18px;font-size:15px;line-height:1.6;}
+.bubble.ai{background:var(--card);color:var(--mist);border-bottom-left-radius:4px;}
+.bubble.user{background:var(--user-bubble);color:#fff;border-bottom-right-radius:4px;}
+.msg-time{font-size:11px;color:var(--dim);padding:0 4px;}
+.reactions{display:flex;gap:6px;margin-top:4px;}
+.react-btn{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;padding:5px 9px;cursor:pointer;color:var(--dim);font-size:13px;display:flex;align-items:center;gap:4px;transition:background .15s;}
+.react-btn:hover{background:rgba(124,92,252,0.15);color:var(--paper);border-color:rgba(124,92,252,0.3);}
+
+.typing-row{display:flex;gap:12px;align-items:flex-end;}
+.typing-bubble{background:var(--card);border-radius:18px;border-bottom-left-radius:4px;padding:14px 18px;display:flex;gap:5px;align-items:center;}
+.typing-bubble span{width:7px;height:7px;border-radius:50%;background:var(--purple);opacity:.4;animation:bounce .8s infinite;}
+.typing-bubble span:nth-child(2){animation-delay:.15s;}
+.typing-bubble span:nth-child(3){animation-delay:.3s;}
+@keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.4;}40%{transform:translateY(-6px);opacity:1;}}
+
+/* input */
+.input-area{padding:16px 22px;border-top:1px solid var(--border);flex-shrink:0;}
+.input-box{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:10px 14px;transition:border-color .2s;margin-bottom:10px;}
+.input-box:focus-within{border-color:rgba(124,92,252,0.4);}
+.input-box input{flex:1;background:transparent;border:none;outline:none;color:var(--paper);font-family:'Noto Sans Armenian',sans-serif;font-size:15px;}
+.input-box input::placeholder{color:var(--dim);}
+.voice-btn,.send-btn{width:38px;height:38px;border-radius:10px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px;transition:background .15s,transform .15s;}
+.voice-btn{background:rgba(255,255,255,0.06);color:var(--mist);}
+.voice-btn:hover{background:rgba(255,255,255,0.1);}
+.send-btn{background:var(--purple);color:#fff;box-shadow:0 2px 10px var(--purple-glow);}
+.send-btn:hover{transform:scale(1.06);}
+.send-btn:disabled{opacity:.5;transform:none;}
+.attach-row{display:flex;gap:8px;align-items:center;}
+.attach-chip{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--mist);cursor:pointer;transition:background .15s;}
+.attach-chip:hover{background:rgba(255,255,255,0.08);}
+.toggle-wrap{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:13px;color:var(--mist);}
+.toggle{width:38px;height:22px;border-radius:999px;background:var(--purple);position:relative;cursor:pointer;flex-shrink:0;}
+.toggle::after{content:'';width:16px;height:16px;border-radius:50%;background:#fff;position:absolute;top:3px;right:3px;}
+
+/* image panel */
+.img-panel{display:none;flex:1;padding:28px;overflow-y:auto;}
+.img-panel.show{display:block;}
+.img-panel-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:560px;}
+.img-panel-card textarea{width:100%;background:transparent;border:none;border-bottom:1px solid rgba(207,198,232,0.2);color:var(--paper);font-family:'Noto Serif Armenian',serif;font-size:17px;line-height:1.5;resize:none;min-height:80px;padding:6px 2px 14px;outline:none;margin-bottom:18px;transition:border-color .3s;}
+.img-panel-card textarea:focus{border-bottom-color:var(--purple);}
+.img-result{margin-top:18px;border-radius:14px;overflow:hidden;border:1px solid var(--border);display:none;}
+.img-result.show{display:block;}
+.img-result img{width:100%;display:block;animation:develop 1.8s ease forwards;}
+.img-loader{padding:40px;text-align:center;color:var(--mist);font-style:italic;}
+@keyframes develop{0%{opacity:0;filter:brightness(.2) saturate(0) blur(12px);}100%{opacity:1;filter:brightness(1) saturate(1) blur(0);}}
+/* CAMERA PANEL */
+.cam-panel{display:none;flex:1;overflow-y:auto;padding:24px;}
+.cam-panel.show{display:block;}
+.cam-layout{display:flex;gap:24px;max-width:900px;flex-wrap:wrap;}
+.cam-preview-wrap{position:relative;width:480px;max-width:100%;aspect-ratio:4/3;background:#0a0818;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);flex-shrink:0;}
+.cam-preview-wrap video,.cam-preview-wrap canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.cam-preview-wrap canvas{z-index:2;}
+.cam-overlay-label{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--mist);pointer-events:none;}
+.cam-controls{flex:1;min-width:240px;display:flex;flex-direction:column;}
+.cam-section-title{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);margin-bottom:10px;}
+.cam-btn-primary{width:100%;background:linear-gradient(135deg,var(--purple),#5b3ed6);color:#fff;border:none;padding:12px;border-radius:12px;font-family:'Noto Sans Armenian',sans-serif;font-weight:600;font-size:14px;cursor:pointer;box-shadow:0 3px 14px var(--purple-glow);}
+.cam-btn-secondary{width:100%;background:rgba(255,255,255,0.06);color:var(--paper);border:1px solid var(--border);padding:11px;border-radius:12px;font-family:'Noto Sans Armenian',sans-serif;font-size:14px;cursor:pointer;transition:background .15s;}
+.cam-btn-secondary:hover{background:rgba(255,255,255,0.1);}
+.cam-bg-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.bg-chip{padding:7px 13px;border-radius:999px;border:1px solid var(--border);font-size:13px;color:var(--mist);cursor:pointer;transition:all .15s;background:rgba(255,255,255,0.03);}
+.bg-chip:hover{border-color:rgba(124,92,252,0.4);color:var(--paper);}
+.bg-chip.active{background:rgba(124,92,252,0.2);border-color:var(--purple);color:var(--paper);}
+.makeup-row{margin-bottom:14px;}
+.mk-label{display:block;font-size:12px;color:var(--mist);margin-bottom:8px;}
+.mk-colors{display:flex;gap:8px;flex-wrap:wrap;}
+.mk-swatch{width:30px;height:30px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .15s,border-color .15s;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;}
+.mk-swatch:hover{transform:scale(1.15);}
+.mk-swatch.active{border-color:#fff;transform:scale(1.15);}
+.makeup-card{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:14px;margin-top:6px;}
+.makeup-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.mk-tab{border:none;background:rgba(255,255,255,0.06);color:var(--mist);padding:8px 12px;border-radius:999px;cursor:pointer;font-size:13px;font-family:'Noto Sans Armenian',sans-serif;}
+.mk-tab.active{background:rgba(124,92,252,0.22);color:var(--paper);box-shadow:0 0 0 1px rgba(124,92,252,0.35) inset;}
+.mk-panel{display:none;}
+.mk-panel.active{display:block;}
+.mk-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:13px;color:var(--paper);}
+.mk-switch{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mist);}
+.mk-switch input{accent-color:var(--purple);}
+.mk-slider{margin-top:12px;}
+.mk-slider label{display:block;font-size:12px;color:var(--mist);margin-bottom:6px;}
+.mk-slider input[type=range]{width:100%;accent-color:var(--purple);}
+
+
+/* =========================
+   RESPONSIVE FIXES
+   ========================= */
+
+/* allow scrolling on mobile */
+html, body {
+  overflow: auto;
+}
+
+/* tablets */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 220px;
+  }
+
+  .msg-body {
+    max-width: 75%;
+  }
+
+  .cam-preview-wrap {
+    width: 100%;
+  }
+}
+
+/* phones + small tablets */
+@media (max-width: 768px) {
+
+  body {
+    flex-direction: column;
+  }
+
+  /* sidebar becomes top drawer style */
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 80%;
+    max-width: 300px;
+    height: 100vh;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* main takes full width */
+  .main {
+    width: 100%;
+  }
+
+  /* chat bubbles wider */
+  .msg-body {
+    max-width: 85%;
+  }
+
+  /* topbar smaller */
+  .topbar {
+    padding: 12px 14px;
+  }
+
+  .chat-area {
+    padding: 14px;
+  }
+
+  /* input becomes compact */
+  .input-area {
+    padding: 10px;
+  }
+
+  .input-box input {
+    font-size: 14px;
+  }
+}
+
+/* very small phones */
+@media (max-width: 480px) {
+
+  #onboard h1 {
+    font-size: 26px;
+  }
+
+  #onboard p {
+    font-size: 14px;
+  }
+
+  .sidebar {
+    width: 100%;
+  }
+
+  .msg-body {
+    max-width: 90%;
+  }
+
+  .bubble {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  .topbar-title {
+    font-size: 14px;
+  }
+}
+
+
+
+
+
+</style>
+</head>
+<body>
+
+<!-- ONBOARDING -->
+<div id="onboard">
+  <div class="eyebrow">Հenakety</div>
+  <h1>Քո անձնային AI օգնականը</h1>
+  <p>Հարցեր, խորհուրդներ, նկարներ — մեկ տեղում։ Անվճար, պարզ, միշտ ձեզ կողքին։</p>
+  <div class="onboard-card">
+    <label for="nameIn">Քո անունը</label>
+    <input type="text" id="nameIn" placeholder="օր.՝ Արամ">
+    <button class="btn-primary" id="startBtn">Սկսել →</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-logo">🤖</div>
+      <div class="sb-brand-text">
+        <div class="sb-brand-title">Հenakety <span class="sb-badge">AI</span></div>
+        <div class="sb-brand-sub">Քո խելացի օգնականը</div>
+      </div>
+    </div>
+
+    <button class="new-btn" id="newChatBtn">＋ &nbsp;Նոր զրույց</button>
+
+    <!-- scrollable section: nav + history -->
+    <div class="sb-scroll">
+      <div class="sb-nav">
+        <div class="sb-item active" id="navChat"><span class="icon">💬</span> Զրույց <span class="sb-dot"></span></div>
+        <div class="sb-item" id="navImage"><span class="icon">🎨</span> Նկար ստեղծել</div>
+        <div class="sb-item" id="navCamera"><span class="icon">📷</span> Կամերա &amp; Ֆիլտր</div>
+        <div class="sb-item"><span class="icon">📋</span> Պատմություն</div>
+        <div class="sb-item"><span class="icon">👤</span> Ես</div>
+        <div class="sb-item"><span class="icon">⚙️</span> Կարգավորումներ</div>
+      </div>
+      <div class="sb-section-title">Պատմություն <a>Դիտել բոլորը</a></div>
+      <div id="histList">
+        <div class="hist-item"><div class="hist-title">Հայոց պատմության մասին</div><div class="hist-time">Այսօր, 14:30</div></div>
+        <div class="hist-item"><div class="hist-title">Ինչ է արհ. բանականությունը</div><div class="hist-time">Այսօր, 12:10</div></div>
+        <div class="hist-item"><div class="hist-title">Օգնիր ծրագրավորման մեջ</div><div class="hist-time">Երեկ, 20:45</div></div>
+        <div class="hist-item"><div class="hist-title">Նկար ստեղծիր բնակարանի</div><div class="hist-time">Երեկ, 18:20</div></div>
+      </div>
+    </div>
+
+    <!-- fixed bottom -->
+    <div class="sb-bottom">
+      <div class="pro-card">
+        <div class="pro-card-title">🔓 Pro տարբերակը</div>
+        <div class="pro-card-sub">Ավելի հնարավորություններ, ավելի արագ պատասխաններ</div>
+        <button class="pro-btn">Բացել Pro</button>
+      </div>
+      <div class="sb-user">
+        <div class="sb-avatar" id="sbAv">Ա</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sbName">Արամ</div>
+          <div class="sb-user-email">արամ@email.com</div>
+        </div>
+        <div class="sb-chevron">▾</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="menu-btn">☰</button>
+        <div>
+          <div class="topbar-title">Հenakety AI</div>
+          <div class="online-indicator">Առցանց</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="icon-btn">☀️</button>
+        <button class="icon-btn on">🌙</button>
+        <button class="icon-btn">···</button>
+      </div>
+    </div>
+
+    <div class="chat-area" id="chatArea"></div>
+
+    <div class="img-panel" id="imgPanel">
+      <div class="img-panel-card">
+        <textarea id="imgPrompt" placeholder="Նկարագրիր ինչ ուզում ես տեսնել... օր.՝ լեռնային տեսարան մայրամուտին" rows="3"></textarea>
+        <button class="btn-primary" id="imgBtn">Ստեղծիր նկար</button>
+        <div class="img-result" id="imgResult"></div>
+      </div>
+    </div>
+
+    <!-- CAMERA PANEL -->
+    <div class="cam-panel" id="camPanel">
+      <div class="cam-layout">
+        <!-- Video + Canvas -->
+        <div class="cam-preview-wrap">
+          <video id="camVideo" autoplay playsinline muted></video>
+          <canvas id="camCanvas"></canvas>
+          <div class="cam-overlay-label" id="camStatus">Կամերան անջատված է</div>
+        </div>
+        <!-- Controls -->
+        <div class="cam-controls">
+          <div class="cam-section-title">📷 Կամերա</div>
+          <button class="cam-btn-primary" id="camToggle">▶ Միացնել կամերան</button>
+
+          <div class="cam-section-title" style="margin-top:20px">🖼️ Ֆոն փոխել</div>
+          <div class="cam-bg-grid" id="bgGrid">
+            <div class="bg-chip active" data-bg="none">Անջատ</div>
+            <div class="bg-chip" data-bg="blur">🌫️ Blur</div>
+            <div class="bg-chip" data-bg="mountains">🏔️ Լեռներ</div>
+            <div class="bg-chip" data-bg="space">🌌 Տիեզերք</div>
+            <div class="bg-chip" data-bg="beach">🏖️ Լողափ</div>
+            <div class="bg-chip" data-bg="office">🏢 Գրասենյակ</div>
+            <div class="bg-chip" data-bg="forest">🌲 Անտառ</div>
+            <div class="bg-chip" data-bg="city">🌃 Քաղաք</div>
+          </div>
+
+          
+          <div class="cam-section-title" style="margin-top:20px">💄 Beauty Studio</div>
+          <div class="makeup-card">
+            <div class="makeup-toolbar">
+              <button class="mk-tab active" data-tab="lips">Շուրթեր</button>
+              <button class="mk-tab" data-tab="blush">Թուշ</button>
+              <button class="mk-tab" data-tab="eyes">Աչքեր</button>
+              <button class="mk-tab" data-tab="skin">Մաշկ</button>
+            </div>
+
+            <div class="mk-panel active" data-panel="lips">
+              <div class="mk-head">
+                <span>Շրթներկ</span>
+                <label class="mk-switch"><input type="checkbox" id="lipsEnabled" checked><span>Միացված</span></label>
+              </div>
+              <div class="mk-colors" id="lipColors">
+                <div class="mk-swatch active" data-type="lips" data-color="210,58,92" style="background:rgb(210,58,92)"></div>
+                <div class="mk-swatch" data-type="lips" data-color="183,43,78" style="background:rgb(183,43,78)"></div>
+                <div class="mk-swatch" data-type="lips" data-color="164,72,54" style="background:rgb(164,72,54)"></div>
+                <div class="mk-swatch" data-type="lips" data-color="224,116,118" style="background:rgb(224,116,118)"></div>
+                <div class="mk-swatch" data-type="lips" data-color="196,96,132" style="background:rgb(196,96,132)"></div>
+                <div class="mk-swatch" data-type="lips" data-color="132,72,62" style="background:rgb(132,72,62)"></div>
+              </div>
+              <div class="mk-slider"><label>Ուժ</label><input type="range" id="lipsIntensity" min="0" max="100" value="58"></div>
+              <div class="mk-slider"><label>Փայլ</label><input type="range" id="lipsGloss" min="0" max="100" value="32"></div>
+            </div>
+
+            <div class="mk-panel" data-panel="blush">
+              <div class="mk-head">
+                <span>Թուշ</span>
+                <label class="mk-switch"><input type="checkbox" id="blushEnabled" checked><span>Միացված</span></label>
+              </div>
+              <div class="mk-colors" id="blushColors">
+                <div class="mk-swatch active" data-type="blush" data-color="248,170,165" style="background:rgb(248,170,165)"></div>
+                <div class="mk-swatch" data-type="blush" data-color="241,146,168" style="background:rgb(241,146,168)"></div>
+                <div class="mk-swatch" data-type="blush" data-color="233,184,144" style="background:rgb(233,184,144)"></div>
+                <div class="mk-swatch" data-type="blush" data-color="215,130,160" style="background:rgb(215,130,160)"></div>
+              </div>
+              <div class="mk-slider"><label>Ուժ</label><input type="range" id="blushIntensity" min="0" max="100" value="38"></div>
+            </div>
+
+            <div class="mk-panel" data-panel="eyes">
+              <div class="mk-head">
+                <span>Աչքեր</span>
+                <label class="mk-switch"><input type="checkbox" id="eyeEnabled" checked><span>Միացված</span></label>
+              </div>
+              <div class="mk-colors" id="eyeColors">
+                <div class="mk-swatch active" data-type="eye" data-color="92,48,124" style="background:rgb(92,48,124)"></div>
+                <div class="mk-swatch" data-type="eye" data-color="30,36,96" style="background:rgb(30,36,96)"></div>
+                <div class="mk-swatch" data-type="eye" data-color="56,112,92" style="background:rgb(56,112,92)"></div>
+                <div class="mk-swatch" data-type="eye" data-color="126,86,34" style="background:rgb(126,86,34)"></div>
+              </div>
+              <div class="mk-slider"><label>Ստվեր</label><input type="range" id="eyeIntensity" min="0" max="100" value="34"></div>
+              <div class="mk-slider"><label>Liner</label><input type="range" id="linerIntensity" min="0" max="100" value="26"></div>
+            </div>
+
+            <div class="mk-panel" data-panel="skin">
+              <div class="mk-head">
+                <span>Մաշկ</span>
+                <label class="mk-switch"><input type="checkbox" id="skinEnabled" checked><span>Միացված</span></label>
+              </div>
+              <div class="mk-slider"><label>Հարթեցում</label><input type="range" id="skinSmooth" min="0" max="100" value="28"></div>
+              <div class="mk-slider"><label>Տաք երանգ</label><input type="range" id="skinWarmth" min="0" max="100" value="16"></div>
+            </div>
+          </div>
+<div style="margin-top:20px">
+            <button class="cam-btn-secondary" id="camCapture">📸 Նկար նկարել</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area" id="inputArea">
+      <div class="input-box">
+        <input type="text" id="chatInput" placeholder="Գրիր քո հարցը...">
+        <button class="voice-btn">🎤</button>
+        <button class="send-btn" id="sendBtn">➤</button>
+      </div>
+      <div class="attach-row">
+        <div class="attach-chip">📎 Ձայնային</div>
+        <div class="attach-chip">📁 Ֆայլ կցել</div>
+        <div class="attach-chip">✨ Տանցելով գործողը</div>
+        <div class="toggle-wrap"><div class="toggle"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+// onboarding
+const nameIn = document.getElementById('nameIn');
+document.getElementById('startBtn').addEventListener('click', startApp);
+nameIn.addEventListener('keydown', e => e.key === 'Enter' && startApp());
+let uName = '';
+
+function startApp(){
+  uName = nameIn.value.trim() || 'Ընկեր';
+  document.getElementById('sbName').textContent = uName;
+  document.getElementById('sbAv').textContent = uName.charAt(0).toUpperCase();
+  document.getElementById('onboard').style.display = 'none';
+  document.getElementById('app').classList.add('show');
+  addAI(`Բարև, ${uName} 👋\nԻնչ կարող եմ օգնել քեզ այսօր!`);
+}
+
+// nav
+const navChat = document.getElementById('navChat');
+const navImage = document.getElementById('navImage');
+const chatArea = document.getElementById('chatArea');
+const imgPanel = document.getElementById('imgPanel');
+const inputArea = document.getElementById('inputArea');
+
+navChat.addEventListener('click', () => {
+  navChat.classList.add('active'); navImage.classList.remove('active');
+  chatArea.style.display = ''; imgPanel.classList.remove('show'); inputArea.style.display = '';
+});
+navImage.addEventListener('click', () => {
+  navImage.classList.add('active'); navChat.classList.remove('active');
+  chatArea.style.display = 'none'; imgPanel.classList.add('show'); inputArea.style.display = 'none';
+});
+document.getElementById('newChatBtn').addEventListener('click', () => {
+  chatHistory = []; chatArea.innerHTML = '';
+  addAI('Նոր զրույց! Ինչ կարող եմ օգնել?');
+});
+
+// chat
+let chatHistory = [];
+function esc(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function ts(){ const n=new Date(); return n.getHours()+':'+(n.getMinutes()+'').padStart(2,'0'); }
+
+function addUser(text){
+  const row = document.createElement('div');
+  row.className = 'msg-row user';
+  row.innerHTML = `<div class="msg-av">${uName.charAt(0).toUpperCase()}</div>
+    <div class="msg-body">
+      <div class="bubble user">${esc(text)}</div>
+      <div class="msg-time">${ts()} <span style="color:var(--purple)">✓✓</span></div>
+    </div>`;
+  chatArea.appendChild(row);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function addAI(text){
+  const row = document.createElement('div');
+  row.className = 'msg-row';
+  row.innerHTML = `<div class="msg-av">🤖</div>
+    <div class="msg-body">
+      <div class="bubble ai">${esc(text).replace(/\n/g,'<br>')}</div>
+      <div class="msg-time">${ts()}</div>
+      <div class="reactions">
+        <button class="react-btn">⎘</button>
+        <button class="react-btn">👍</button>
+        <button class="react-btn">👎</button>
+      </div>
+    </div>`;
+  chatArea.appendChild(row);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function showTyping(){
+  const r = document.createElement('div');
+  r.className = 'typing-row'; r.id = 'typingRow';
+  r.innerHTML = `<div class="msg-av">🤖</div>
+    <div class="typing-bubble"><span></span><span></span><span></span></div>`;
+  chatArea.appendChild(r); chatArea.scrollTop = chatArea.scrollHeight;
+}
+function hideTyping(){ const r=document.getElementById('typingRow'); if(r) r.remove(); }
+
+const weatherWords = ['eghanak','yeghanaky','odin','jermastijan'];
+async function getWeather(text){
+  if(!weatherWords.some(w=>text.toLowerCase().includes(w))) return null;
+  try{
+    const geo = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=Yerevan&count=1');
+    const gd = await geo.json();
+    if(!gd.results?.length) return null;
+    const {latitude,longitude,name} = gd.results[0];
+    const wr = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,wind_speed_10m&timezone=auto`);
+    const wd = await wr.json();
+    return `${name}-um hima ${wd.current.temperature_2m}°C e, qamin ${wd.current.wind_speed_10m} km/j:`;
+  }catch(e){ return null; }
+}
+
+async function sendMsg(){
+  const input = document.getElementById('chatInput');
+  const btn = document.getElementById('sendBtn');
+  const text = input.value.trim();
+  if(!text) return;
+  addUser(text);
+  chatHistory.push({role:'user',content:text});
+  input.value = ''; btn.disabled = true;
+  showTyping();
+  const weather = await getWeather(text);
+  if(weather){ hideTyping(); addAI(weather); chatHistory.push({role:'assistant',content:weather}); btn.disabled=false; return; }
+  try{
+    const response = await fetch("http://localhost:3000/api/chat", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    message: text,
+    history: chatHistory
+  })
+});
+
+const data = await response.json();
+const reply = data.reply || "Սխալ տեղի ունեցավ։";
+    hideTyping();
+    addAI(reply);
+    chatHistory.push({role:'assistant',content:reply});
+  }catch(e){
+    hideTyping();
+    addAI('Չհաջողվեց միանալ AI-ին։');
+  }
+  btn.disabled = false;
+}
+
+document.getElementById('sendBtn').addEventListener('click', sendMsg);
+document.getElementById('chatInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendMsg(); });
+
+// image
+document.getElementById('imgBtn').addEventListener('click', ()=>{
+  const prompt = document.getElementById('imgPrompt').value.trim();
+  const btn = document.getElementById('imgBtn');
+  const result = document.getElementById('imgResult');
+  if(!prompt){ document.getElementById('imgPrompt').focus(); return; }
+  btn.disabled = true; result.classList.add('show');
+  result.innerHTML = '<div class="img-loader">Ստեղծվում է...</div>';
+  const seed = Math.floor(Math.random()*100000);
+  const img = new Image();
+  img.onload = ()=>{ result.innerHTML=''; result.appendChild(img); btn.disabled=false; };
+  img.onerror = ()=>{ result.innerHTML='<div class="img-loader">Չստացվեց, փորձիր նորից</div>'; btn.disabled=false; };
+  img.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=768&height=768&seed=${seed}&nologo=true`;
+});
+
+// Sidebar nav routing
+function showView(view){
+  const chatArea = document.getElementById('chatArea');
+  const imgPanel = document.getElementById('imgPanel');
+  const camPanel = document.getElementById('camPanel');
+  const inputArea = document.getElementById('inputArea');
+  chatArea.style.display = 'none';
+  imgPanel.classList.remove('show');
+  camPanel.classList.remove('show');
+  inputArea.style.display = 'none';
+  if(view==='chat'){ chatArea.style.display=''; inputArea.style.display=''; }
+  else if(view==='image'){ imgPanel.classList.add('show'); }
+  else if(view==='camera'){ camPanel.classList.add('show'); }
+}
+
+document.querySelectorAll('.sb-item').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+    item.classList.add('active');
+    if(item.id==='navChat') showView('chat');
+    else if(item.id==='navImage') showView('image');
+    else if(item.id==='navCamera') showView('camera');
+    else alert('Այս բաժինը դեռ մշակման փուլում է։');
+  });
+});
+document.querySelectorAll('.hist-item').forEach(h=>{
+  h.addEventListener('click',()=>document.getElementById('navChat').click());
+});
+
+// ── CAMERA ──────────────────────────────────────────────
+const camVideo   = document.getElementById('camVideo');
+const camCanvas  = document.getElementById('camCanvas');
+const camStatus  = document.getElementById('camStatus');
+const camToggle  = document.getElementById('camToggle');
+const camCapture = document.getElementById('camCapture');
+const ctx        = camCanvas.getContext('2d');
+
+let camStream   = null;
+let camRunning  = false;
+let rafId       = null;
+let activeBg    = 'none';
+let makeup      = {
+  lips:'210,58,92',
+  blush:'248,170,165',
+  eye:'92,48,124',
+  lipsEnabled:true, blushEnabled:true, eyeEnabled:true, skinEnabled:true,
+  lipsIntensity:58, lipsGloss:32, blushIntensity:38, eyeIntensity:34, linerIntensity:26,
+  skinSmooth:28, skinWarmth:16
+};
+let bgImage     = null;
+let segmenter   = null;
+let faceMesh    = null;
+let faceLandmarks = null;
+
+// background images from Pollinations
+const BG_URLS = {
+  mountains: 'https://image.pollinations.ai/prompt/majestic%20mountain%20landscape%20at%20sunset%20photorealistic?width=640&height=480&seed=1&nologo=true',
+  space:     'https://image.pollinations.ai/prompt/deep%20space%20nebula%20stars%20galaxy%20photorealistic?width=640&height=480&seed=2&nologo=true',
+  beach:     'https://image.pollinations.ai/prompt/tropical%20beach%20crystal%20water%20sunny%20photorealistic?width=640&height=480&seed=3&nologo=true',
+  office:    'https://image.pollinations.ai/prompt/modern%20office%20interior%20bright%20professional?width=640&height=480&seed=4&nologo=true',
+  forest:    'https://image.pollinations.ai/prompt/lush%20green%20forest%20sunlight%20through%20trees?width=640&height=480&seed=5&nologo=true',
+  city:      'https://image.pollinations.ai/prompt/city%20skyline%20at%20night%20lights%20bokeh?width=640&height=480&seed=6&nologo=true',
+};
+const bgCache = {};
+
+function loadBgImage(key){
+  if(bgCache[key]) return Promise.resolve(bgCache[key]);
+  return new Promise(res=>{
+    const img = new Image(); img.crossOrigin='anonymous';
+    img.onload = ()=>{ bgCache[key]=img; res(img); };
+    img.onerror = ()=>res(null);
+    img.src = BG_URLS[key];
+  });
+}
+
+camToggle.addEventListener('click', async ()=>{
+  if(camRunning){ stopCam(); return; }
+  try{
+    camStream = await navigator.mediaDevices.getUserMedia({video:{width:640,height:480},audio:false});
+    camVideo.srcObject = camStream;
+    await new Promise(r=>camVideo.onloadedmetadata=r);
+    camCanvas.width  = camVideo.videoWidth;
+    camCanvas.height = camVideo.videoHeight;
+    camStatus.style.display='none';
+    camRunning=true;
+    camToggle.textContent='⏹ Անջատել կամերան';
+
+    // load MediaPipe selfie segmentation
+    if(!segmenter && window.SelfieSegmentation){
+      segmenter = new SelfieSegmentation({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${f}`});
+      segmenter.setOptions({modelSelection:1});
+      segmenter.onResults(onSegResults);
+    }
+    if(!faceMesh && window.FaceMesh){
+      faceMesh = new FaceMesh({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`});
+      faceMesh.setOptions({
+        maxNumFaces:1,
+        refineLandmarks:true,
+        minDetectionConfidence:0.6,
+        minTrackingConfidence:0.6
+      });
+      faceMesh.onResults(r=>{ faceLandmarks = r.multiFaceLandmarks?.[0] || null; });
+    }
+    renderLoop();
+  }catch(e){
+    camStatus.textContent='Կամերան հասանելի չէ 😔';
+  }
+});
+
+function stopCam(){
+  camRunning=false;
+  if(rafId) cancelAnimationFrame(rafId);
+  if(camStream) camStream.getTracks().forEach(t=>t.stop());
+  ctx.clearRect(0,0,camCanvas.width,camCanvas.height);
+  camStatus.style.display='';
+  camStatus.textContent='Կամերան անջատված է';
+  camToggle.textContent='▶ Միացնել կամերան';
+}
+
+let segResult = null;
+function onSegResults(r){ segResult = r; }
+
+
+async function renderLoop(){
+  if(!camRunning) return;
+  const w = camCanvas.width, h = camCanvas.height;
+
+  // Update face landmarks each frame
+  if(faceMesh){
+    try{ await faceMesh.send({image:camVideo}); }catch(e){}
+  }
+
+  if((activeBg==='none' || activeBg==='blur') && faceLandmarks && makeup.lipsEnabled===false && makeup.blushEnabled===false && makeup.eyeEnabled===false && makeup.skinEnabled===false){
+    ctx.drawImage(camVideo,0,0,w,h);
+    rafId=requestAnimationFrame(renderLoop);
+    return;
+  }
+
+  if(segmenter && activeBg!=='none'){
+    await segmenter.send({image:camVideo});
+    if(segResult){
+      const mask = segResult.segmentationMask;
+      ctx.clearRect(0,0,w,h);
+      if(activeBg==='blur'){
+        ctx.filter='blur(18px)';
+        ctx.drawImage(camVideo,0,0,w,h);
+        ctx.filter='none';
+      } else {
+        const bg = bgCache[activeBg];
+        if(bg) ctx.drawImage(bg,0,0,w,h);
+        else ctx.fillRect(0,0,w,h);
+      }
+      const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h;
+      const tc=tmp.getContext('2d');
+      tc.drawImage(camVideo,0,0,w,h);
+      tc.globalCompositeOperation='destination-in';
+      tc.drawImage(mask,0,0,w,h);
+      ctx.clearRect(0,0,w,h);
+      if(activeBg==='blur'){
+        ctx.filter='blur(18px)'; ctx.drawImage(camVideo,0,0,w,h); ctx.filter='none';
+      } else {
+        const bg=bgCache[activeBg]; if(bg) ctx.drawImage(bg,0,0,w,h);
+      }
+      ctx.drawImage(tmp,0,0,w,h);
+    } else {
+      ctx.drawImage(camVideo,0,0,w,h);
+    }
+  } else {
+    ctx.drawImage(camVideo,0,0,w,h);
+  }
+
+  applyMakeup(w,h);
+  rafId=requestAnimationFrame(renderLoop);
+}
+
+
+
+
+function applyMakeup(w,h){
+  if(!faceLandmarks){ return; }
+
+  const pt = i => ({x: faceLandmarks[i].x * w, y: faceLandmarks[i].y * h});
+  const drawSoftPolygon = (indices, fill, alpha=0.5, blur=10, mode='source-over')=>{
+    if(!indices?.length) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.filter = `blur(${blur}px)`;
+    ctx.globalCompositeOperation = mode;
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    const p0 = pt(indices[0]);
+    ctx.moveTo(p0.x, p0.y);
+    for(let i=1;i<indices.length;i++){
+      const p = pt(indices[i]);
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  };
+  const drawLine = (indices, color, alpha=0.7, width=2.5)=>{
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    const p0 = pt(indices[0]);
+    ctx.moveTo(p0.x,p0.y);
+    for(let i=1;i<indices.length;i++){
+      const p=pt(indices[i]);
+      ctx.lineTo(p.x,p.y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  // Key landmark groups
+  const upperLip = [61,185,40,39,37,0,267,269,270,409,291];
+  const lowerLip = [61,146,91,181,84,17,314,405,321,375,291];
+  const lipFull  = [61,185,40,39,37,0,267,269,270,409,291,375,321,405,314,17,84,181,91,146];
+  const leftEyeTop = [33,160,159,158,157,173,133];
+  const rightEyeTop = [362,385,386,387,388,466,263];
+  const leftEyeShadow = [33,247,30,29,27,28,56,190,243,112,26,22,23,24,110,25,130,247];
+  const rightEyeShadow = [263,467,260,259,257,258,286,414,463,341,256,252,253,254,339,255,359,467];
+  const leftCheek = [50,101,118,117,111,123,147,187,205,50];
+  const rightCheek = [280,330,347,346,340,352,376,411,425,280];
+  const faceSoft = [10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109];
+
+  // skin smoothing / warmth
+  if(makeup.skinEnabled){
+    const smooth = (makeup.skinSmooth||0)/100;
+    const warm = (makeup.skinWarmth||0)/100;
+    if(smooth > 0){
+      drawSoftPolygon(faceSoft, 'rgba(245,220,215,1)', smooth*0.10, 14);
+    }
+    if(warm > 0){
+      drawSoftPolygon(faceSoft, 'rgba(255,170,120,1)', warm*0.08, 18, 'soft-light');
+    }
+  }
+
+  // lips
+  if(makeup.lipsEnabled && makeup.lips){
+    const [r,g,b] = makeup.lips.split(',');
+    const alpha = (makeup.lipsIntensity||0)/100 * 0.78;
+    drawSoftPolygon(lipFull, `rgb(${r},${g},${b})`, alpha, 2, 'multiply');
+    const gloss = (makeup.lipsGloss||0)/100;
+    if(gloss > 0){
+      drawSoftPolygon(upperLip, 'rgba(255,255,255,1)', gloss*0.12, 4, 'screen');
+    }
+  }
+
+  // blush
+  if(makeup.blushEnabled && makeup.blush){
+    const [r,g,b] = makeup.blush.split(',');
+    const alpha = (makeup.blushIntensity||0)/100 * 0.35;
+    drawSoftPolygon(leftCheek, `rgb(${r},${g},${b})`, alpha, 18, 'multiply');
+    drawSoftPolygon(rightCheek, `rgb(${r},${g},${b})`, alpha, 18, 'multiply');
+  }
+
+  // eye shadow + liner
+  if(makeup.eyeEnabled && makeup.eye){
+    const [r,g,b] = makeup.eye.split(',');
+    const shadow = (makeup.eyeIntensity||0)/100 * 0.42;
+    drawSoftPolygon(leftEyeShadow, `rgb(${r},${g},${b})`, shadow, 8, 'multiply');
+    drawSoftPolygon(rightEyeShadow, `rgb(${r},${g},${b})`, shadow, 8, 'multiply');
+
+    const liner = (makeup.linerIntensity||0)/100;
+    if(liner > 0){
+      drawLine(leftEyeTop, 'rgba(20,20,28,1)', 0.35 + liner*0.5, 1.5 + liner*2);
+      drawLine(rightEyeTop, 'rgba(20,20,28,1)', 0.35 + liner*0.5, 1.5 + liner*2);
+    }
+  }
+}
+
+
+
+// BG chip clicks
+document.querySelectorAll('.bg-chip').forEach(chip=>{
+  chip.addEventListener('click', async ()=>{
+    document.querySelectorAll('.bg-chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    activeBg = chip.dataset.bg;
+    if(BG_URLS[activeBg] && !bgCache[activeBg]){
+      chip.textContent='⏳';
+      await loadBgImage(activeBg);
+      chip.textContent=chip.dataset.bg==='mountains'?'🏔️ Լեռներ':chip.textContent;
+    }
+  });
+});
+
+// makeup controls
+document.querySelectorAll('.mk-swatch').forEach(sw=>{
+  sw.addEventListener('click', ()=>{
+    const type=sw.dataset.type;
+    document.querySelectorAll(`.mk-swatch[data-type="${type}"]`).forEach(s=>s.classList.remove('active'));
+    sw.classList.add('active');
+    makeup[type]=sw.dataset.color;
+  });
+});
+
+document.querySelectorAll('.mk-tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.mk-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.mk-panel').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelector(`.mk-panel[data-panel="${tab.dataset.tab}"]`)?.classList.add('active');
+  });
+});
+
+[
+  ['lipsIntensity','lipsIntensity'],['lipsGloss','lipsGloss'],
+  ['blushIntensity','blushIntensity'],
+  ['eyeIntensity','eyeIntensity'],['linerIntensity','linerIntensity'],
+  ['skinSmooth','skinSmooth'],['skinWarmth','skinWarmth']
+].forEach(([id,key])=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('input',()=> makeup[key]=Number(el.value));
+});
+
+[
+  ['lipsEnabled','lipsEnabled'],['blushEnabled','blushEnabled'],
+  ['eyeEnabled','eyeEnabled'],['skinEnabled','skinEnabled']
+].forEach(([id,key])=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('change',()=> makeup[key]=el.checked);
+});
+
+// capture
+camCapture.addEventListener('click',()=>{
+  if(!camRunning) return;
+  const a=document.createElement('a');
+  a.download='henakety_capture.png';
+  a.href=camCanvas.toDataURL('image/png');
+  a.click();
+});
+
+</script>
+</body>
+</html>
